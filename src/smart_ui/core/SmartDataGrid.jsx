@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { DataGrid } from "@mui/x-data-grid";
 import { buildColumns } from "../core/dataGridEngine/columnBuilder/columnBuilder.js";
 import { fetchPagedData } from "../core/dataGridEngine/dataFetcher/DataFetcher.js";
+import RowDrawer from "../components/RowDrawer.jsx";
 
 export function SmartDataGrid({
   table,
@@ -15,9 +16,12 @@ export function SmartDataGrid({
 }) {
   const [rows, setRows] = useState([]);
   const [rowCount, setRowCount] = useState(0);
-  const [page, setPage] = useState(0);  // MUI uses 0-based pages
+  const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(initialPageSize);
   const [loading, setLoading] = useState(false);
+
+  const [selectedRow, setSelectedRow] = useState(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   // columns
   const columns = useMemo(() => {
@@ -40,7 +44,7 @@ export function SmartDataGrid({
 
       const { rows, total } = await fetchPagedData(
         table,
-        page + 1,      // API uses 1-based
+        page + 1,
         pageSize
       );
 
@@ -64,31 +68,37 @@ export function SmartDataGrid({
   if (!schema) return <div>Loading schema...</div>;
 
   return (
-    <DataGrid
-      autoHeight
-      rows={rows}
-      columns={columns}
-      loading={loading}
-      
-      // 🔥 REQUIRED
-      pagination
-      paginationMode="server"
-      page={page}
-      pageSize={pageSize}
-      rowCount={rowCount}
+    <>
+      <DataGrid
+        autoHeight
+        rows={rows}
+        columns={columns}
+        loading={loading}
+        onRowClick={(params) => {
+          setSelectedRow(params.row);
+          setDrawerOpen(true);
+        }}
+        pagination
+        paginationMode="server"
+        page={page}
+        pageSize={pageSize}
+        rowCount={rowCount}
+        onPageChange={(newPage) => setPage(newPage)}
+        onPageSizeChange={(newSize) => {
+          setPage(0);
+          setPageSize(newSize);
+        }}
+        rowsPerPageOptions={pageSizeOptions}
+        disableSelectionOnClick
+        getRowId={resolveRowId}
+      />
 
-      onPageChange={(newPage) => {
-        setPage(newPage);
-      }}
-
-      onPageSizeChange={(newSize) => {
-        setPage(0);
-        setPageSize(newSize);
-      }}
-
-      rowsPerPageOptions={pageSizeOptions}
-      disableSelectionOnClick
-      getRowId={resolveRowId}
-    />
+      <RowDrawer
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        row={selectedRow}
+        schema={schema}
+      />
+    </>
   );
 }

@@ -78,6 +78,7 @@ export default function RefugeesGrid() {
         table="refugees"
         schema={schema["refugees"]}            // ← سكيما جدول واحد
         FieldsShow={["id", "frist_name", "origin_country",'birth_place','gender','current_stage']} // الأعمدة التي تريد إظهارها فقط
+        // 
         // actions={["edit", "delete"]}           // مستقبلاً نربطها بأزرار
         initialPageSize={2}
   pageSizeOptions={[2, 5, 10, 20]}   // ← أضف هذه

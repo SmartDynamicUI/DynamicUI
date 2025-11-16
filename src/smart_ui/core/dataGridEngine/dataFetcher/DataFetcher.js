@@ -26,7 +26,6 @@ export async function fetchPagedData(table, page, pageSize) {
   const url = `http://127.0.0.1:9001/api/mains/smart-grid/${table}?page=${page}&pageSize=${pageSize}`;
 
   const res = await httpGet(url);
-console.log("API response:", res);
 
   // هنا نفترض أن الـ API يرجع: { success, data: { records, total } }
   if (res && res.success && res.data) {
