@@ -18,19 +18,17 @@ import {
   getFields,
 } from '../smart_ui/core/schemaEngine/index.js';
 
-import { SmartDataGrid } from "../smart_ui/core/SmartDataGrid";
-import { memoryCache } from "../smart_ui/core/schemaEngine/schemaCache/SchemaCache"; // أو من الـ store عندك
-
+import { SmartDataGrid } from '../smart_ui/core/SmartDataGrid';
+import { memoryCache } from '../smart_ui/core/schemaEngine/schemaCache/SchemaCache'; // أو من الـ store عندك
 
 const API_BASE_URL = process.env.REACT_APP_SCHEMA_ENDPOINT;
 
 export default function RefugeesGrid() {
   const api = useApi();
 
-//     const schema = memoryCache.schemas; // أو من context
+  //     const schema = memoryCache.schemas; // أو من context
 
-// console.log('schema columins',schema['refugees']);
-
+  // console.log('schema columins',schema['refugees']);
 
   const [schema, setSchema] = useState(null);
   const [columns, setColumns] = useState([]);
@@ -59,7 +57,6 @@ export default function RefugeesGrid() {
   //   load();
   // }, []);
 
-
   useEffect(() => {
     async function load() {
       await initSchemaEngine({ endpointOverride: API_BASE_URL });
@@ -76,12 +73,12 @@ export default function RefugeesGrid() {
 
       <SmartDataGrid
         table="refugees"
-        schema={schema["refugees"]}            // ← سكيما جدول واحد
-        FieldsShow={["id", "frist_name", "origin_country",'birth_place','gender','current_stage']} // الأعمدة التي تريد إظهارها فقط
-        // 
+        schema={schema['refugees']} // ← سكيما جدول واحد
+        FieldsShow={['id', 'frist_name', 'origin_country', 'birth_place', 'gender', 'gov_label']} // الأعمدة التي تريد إظهارها فقط
+        //
         // actions={["edit", "delete"]}           // مستقبلاً نربطها بأزرار
         initialPageSize={2}
-  pageSizeOptions={[2, 5, 10, 20]}   // ← أضف هذه
+        pageSizeOptions={[2, 5, 10, 20]} // ← أضف هذه
       />
     </div>
   );
