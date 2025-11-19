@@ -18,7 +18,7 @@ import {
   getFields,
 } from '../smart_ui/core/schemaEngine/index.js';
 
-import { SmartDataGrid } from '../smart_ui/core/SmartDataGrid';
+import { SmartDataGrid } from '../smart_ui/components/SmartDataGrid';
 import { memoryCache } from '../smart_ui/core/schemaEngine/schemaCache/SchemaCache'; // أو من الـ store عندك
 
 const API_BASE_URL = process.env.REACT_APP_SCHEMA_ENDPOINT;
@@ -65,7 +65,20 @@ export default function RefugeesGrid() {
     load();
   }, []);
 
-  if (!schema) return <div>Loading...</div>;
+
+// تحويل السكيما إلى الشكل المطلوب
+const uiSchema = useMemo(() => {
+  if (!schema) return null;
+
+  const out = {};
+  for (let table in schema) {
+    out[table] = schema[table].columns; 
+  }
+  return out;
+}, [schema]);
+
+  console.log('schema',schema);
+    if (!schema) return <div>Loading...</div>;
 
   return (
     <div style={{ padding: 20 }}>
@@ -80,10 +93,11 @@ export default function RefugeesGrid() {
         initialPageSize={2}
         pageSizeOptions={[2, 5, 10, 20]} // ← أضف هذه
       /> */}
-      <SmartDataGrid
+      <Box sx={{ height: "calc(100vh - 200px)" }}> 
+        <SmartDataGrid
         table="refugees"
-        schema={schema['refugees']}
-        FieldsShow={['id', 'frist_name', 'gender', 'gov_label']}
+ schema={uiSchema} 
+ FieldsShow={['id', 'frist_name', 'gender', 'gov_label']}
         DrawerTabs={[
           { key: 'basic', label: 'الأساسي', type: 'form' },
           { key: 'family', label: 'العائلة', type: 'grid', table: 'family_members' },
@@ -103,7 +117,8 @@ export default function RefugeesGrid() {
         initialTab="basic"
         onTabChange={(key) => console.log('Tab:', key)}
         onBeforeOpen={(row) => row.status !== 'blocked'}
-      />
+      /></Box>
+
     </div>
   );
 }
