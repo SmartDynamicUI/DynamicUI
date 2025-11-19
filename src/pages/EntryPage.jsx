@@ -71,7 +71,7 @@ export default function RefugeesGrid() {
     <div style={{ padding: 20 }}>
       <h2>Schema Example Me</h2>
 
-      <SmartDataGrid
+      {/* <SmartDataGrid
         table="refugees"
         schema={schema['refugees']} // ← سكيما جدول واحد
         FieldsShow={['id', 'frist_name', 'origin_country', 'birth_place', 'gender', 'gov_label']} // الأعمدة التي تريد إظهارها فقط
@@ -79,6 +79,30 @@ export default function RefugeesGrid() {
         // actions={["edit", "delete"]}           // مستقبلاً نربطها بأزرار
         initialPageSize={2}
         pageSizeOptions={[2, 5, 10, 20]} // ← أضف هذه
+      /> */}
+      <SmartDataGrid
+        table="refugees"
+        schema={schema['refugees']}
+        FieldsShow={['id', 'frist_name', 'gender', 'gov_label']}
+        DrawerTabs={[
+          { key: 'basic', label: 'الأساسي', type: 'form' },
+          { key: 'family', label: 'العائلة', type: 'grid', table: 'family_members' },
+          { key: 'files', label: 'الملفات', type: 'grid', table: 'refugee_files' },
+        ]}
+        DrawerHideFields={['created_at', 'updated_at']}
+        DrawerTitle={(row) => `تفاصيل اللاجئ رقم ${row.id}`}
+        drawerWidth={500}
+        DrawerStyle={{ background: '#fafafa' }}
+        DrawerActions={[{ key: 'edit', label: 'تعديل', onClick: (row) => console.log(row) }]}
+        DrawerFooter={(row) => `آخر تحديث: ${row.updated_at}`}
+        DrawerTabsVisible={(key) => key !== 'files'}
+        customTabRenderer={{
+          family: ({ row }) => <div>عدد أفراد العائلة: {row.familyCount}</div>,
+        }}
+        lazyTabs={true}
+        initialTab="basic"
+        onTabChange={(key) => console.log('Tab:', key)}
+        onBeforeOpen={(row) => row.status !== 'blocked'}
       />
     </div>
   );

@@ -1,127 +1,268 @@
-// import Drawer from '@mui/material/Drawer';
-// import Box from '@mui/material/Box';
-// import Typography from '@mui/material/Typography';
-// import Divider from '@mui/material/Divider';
-
-// export default function RowDrawer({ open, onClose, row, schema }) {
-//   if (!row || !schema) return null;
-
-//   return (
-//     <Drawer anchor="right" open={open} onClose={onClose}>
-//       <Box sx={{ width: '100%', padding: 2 }}>
-//         <Typography variant="h6" sx={{ mb: 2 }}>
-//           التفاصيل{' '}
-//         </Typography>
-
-//         {schema.columns.map((col) => (
-//           <Box key={col.name} sx={{ mb: 2 }}>
-//             <Typography sx={{ fontWeight: 'bold' }}>{col.comment || col.name}</Typography>
-//             <Typography color="text.secondary">{String(row[col.name] ?? '')}</Typography>
-//             <Divider sx={{ mt: 1 }} />
-//           </Box>
-//         ))}
-//       </Box>
-//     </Drawer>
-//   );
-// }
-
-import React from 'react';
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Drawer,
   Box,
   Typography,
   Divider,
-  Grid,
-  List,
-  ListItem,
-  useTheme,
-  Stack, // استخدام Stack لتنظيم العنوان والفاصل
-} from '@mui/material';
+  Tabs,
+  Tab,
+  Stack,
+  Button,
+} from "@mui/material";
 
-// يجب استيراد جميع المكونات التي تحتاجها في رأس الملف
+/**
+ * RowDrawer Dynamic v2
+ *
+ * مكوّن Drawer ديناميكي بالكامل لعرض تفاصيل سجل من الـ SmartDataGrid.
+ * يدعم:
+ * - Tabs ديناميكية
+ * - إخفاء الحقول
+ * - Actions في الأعلى
+ * - Footer في الأسفل
+ * - تخصيص شكل الـ Drawer
+ * - custom renderers لكل Tab
+ *
+ * ملاحظة:
+ * هذا المكوّن "عام" ولا يعرف SmartDataGrid من الداخل.
+ * كل التحكم يتم عن طريق الـ Props التي يرسلها المكون الأب.
+ */
+export default function RowDrawer({
+  open,
+  onClose,
+  row,
+  schema,
 
-export default function RowDrawer({ open, onClose, row, schema }) {
-  // استخدام useTheme لضمان التنسيق الموحد والمعياري
-  const theme = useTheme();
+  // Tabs
+  DrawerTabs = [],
+  DrawerHideFields = [],
 
-  // Guard Clause: التأكد من وجود البيانات قبل العرض
+  // شكل ومظهر
+  DrawerTitle,
+  drawerWidth,
+  DrawerStyle = {},
+
+  // أزرار عمليات
+  DrawerActions = [],
+
+  // Footer ثابت
+  DrawerFooter,
+
+  // تحكم متقدم
+  DrawerTabsVisible,   // (tabKey, extra?) => boolean
+  customTabRenderer = {}, // { [tabKey]: ({ row, schema, tab }) => ReactNode }
+  lazyTabs = true,
+  initialTab,
+  onTabChange,         // (tabKey, tab) => void
+
+  // ملاحظة: onBeforeOpen يفضّل تطبيقه في المكوّن الأب (SmartDataGrid)
+}) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const [activeTabKey, setActiveTabKey] = useState(initialTab || null);
+
+  // مزامنة حالة الفتح
+  useEffect(() => {
+    setInternalOpen(open);
+  }, [open]);
+
+  // فلترة التابات الظاهرة حسب DrawerTabsVisible
+  const visibleTabs = useMemo(() => {
+    if (!DrawerTabs || DrawerTabs.length === 0) return [];
+    if (!DrawerTabsVisible) return DrawerTabs;
+
+    try {
+      return DrawerTabs.filter((tab) =>
+        DrawerTabsVisible(tab.key, tab)
+      );
+    } catch (e) {
+      console.warn("DrawerTabsVisible error:", e);
+      return DrawerTabs;
+    }
+  }, [DrawerTabs, DrawerTabsVisible]);
+
+  // اختيار التاب النشط عند تغيير السجل أو التابات
+  useEffect(() => {
+    if (!visibleTabs || visibleTabs.length === 0) {
+      setActiveTabKey(null);
+      return;
+    }
+
+    // لو initialTab موجود وضمن التابات الظاهرة
+    if (initialTab && visibleTabs.some((t) => t.key === initialTab)) {
+      setActiveTabKey(initialTab);
+      return;
+    }
+
+    // لو التاب الحالي لم يعد موجوداً، خذ أول تاب
+    if (!activeTabKey || !visibleTabs.some((t) => t.key === activeTabKey)) {
+      setActiveTabKey(visibleTabs[0].key);
+    }
+  }, [row, initialTab, visibleTabs]);
+
+  const handleChangeTab = (_event, newIndex) => {
+    const tab = visibleTabs[newIndex];
+    if (!tab) return;
+    setActiveTabKey(tab.key);
+    if (onTabChange) onTabChange(tab.key, tab);
+  };
+
   if (!row || !schema || !schema.columns) {
     return null;
   }
 
+  const effectiveWidth = drawerWidth || { xs: "100vw", sm: 420 };
+
+  const activeTab = activeTabKey
+    ? visibleTabs.find((t) => t.key === activeTabKey)
+    : visibleTabs[0];
+
+  const renderFormTab = () => {
+    return (
+      <Box sx={{ mt: 1 }}>
+        {schema.columns.map((col) => {
+          const colName = col.name || col.column_name;
+          if (!colName) return null;
+
+          // إخفاء الأعمدة حسب DrawerHideFields
+          if (DrawerHideFields.includes(colName)) {
+            return null;
+          }
+
+          const label = col.comment || col.label || colName;
+          const rawValue = row[colName];
+          const value = rawValue === null || rawValue === undefined ? "-" : String(rawValue);
+
+          return (
+            <Box key={colName} sx={{ mb: 2 }}>
+              <Typography variant="body2" sx={{ fontWeight: "bold" }}>
+                {label}
+              </Typography>
+              <Typography variant="body1" color="text.secondary">
+                {value}
+              </Typography>
+              <Divider sx={{ mt: 1 }} />
+            </Box>
+          );
+        })}
+      </Box>
+    );
+  };
+
+  const renderTabContent = (tab) => {
+    if (!tab) return null;
+
+    // إن وجد Renderer مخصص لهذا التاب نستخدمه
+    if (
+      customTabRenderer &&
+      typeof customTabRenderer[tab.key] === "function"
+    ) {
+      return customTabRenderer[tab.key]({ row, schema, tab });
+    }
+
+    // التاب الأساسي من النوع form
+    if (tab.type === "form" || !tab.type) {
+      return renderFormTab();
+    }
+
+    // لو النوع grid أو غيره ولم يتم توفير custom renderer
+    return (
+      <Typography variant="body2" color="text.secondary">
+        لا يوجد محتوى مخصص لهذا التبويب ({tab.key}).
+      </Typography>
+    );
+  };
+
+  const titleText =
+    typeof DrawerTitle === "function"
+      ? DrawerTitle(row)
+      : DrawerTitle || `تفاصيل — ID: ${row.id}`;
+
   return (
-    <Drawer anchor="right" open={open} onClose={onClose}>
+    <Drawer anchor="right" open={internalOpen} onClose={onClose}>
       <Box
-        role="presentation" // لتحسين إمكانية الوصول (Accessibility)
         sx={{
-          // 2. استغلال المساحة وتنسيق عالمي: عرض مختلف حسب حجم الشاشة
-          width: { xs: '100vw', sm: 350, md: 450 },
-          maxWidth: '100%',
-          padding: theme.spacing(3), // استخدام المسافات المعيارية
+          width: effectiveWidth,
+          display: "flex",
+          flexDirection: "column",
+          height: "100%",
+          ...DrawerStyle,
         }}
       >
-        {/* العنوان والفاصل في Stack لسهولة التنظيم */}
-        <Stack spacing={2} sx={{ mb: theme.spacing(2) }}>
-          <Typography
-            variant="h5"
-            component="h2" // استخدام component="h2" للمعايير الدلالية
-            sx={{ fontWeight: 600 }}
+        {/* Header */}
+        <Box sx={{ p: 2 }}>
+          <Stack
+            direction="row"
+            alignItems="center"
+            justifyContent="space-between"
+            spacing={1}
           >
-            تفاصيل
-          </Typography>
-          <Divider />
-        </Stack>
+            <Typography variant="h6" sx={{ fontWeight: "bold" }}>
+              {titleText}
+            </Typography>
 
-        {/* 1. سهولة القراءة: استخدام List لعرض تفاصيل البيانات بشكل منظم */}
-        <List dense disablePadding>
-          {schema.columns.map((col) => {
-            const label = col.comment || col.name;
-            const rawValue = row[col.name];
-            const value = String(rawValue ?? '-'); // عرض "-" إذا كانت القيمة فارغة أو غير موجودة
+            {DrawerActions && DrawerActions.length > 0 && (
+              <Stack direction="row" spacing={1}>
+                {DrawerActions.map((action) => (
+                  <Button
+                    key={action.key}
+                    size="small"
+                    variant={action.variant || "outlined"}
+                    color={action.color || "primary"}
+                    onClick={() =>
+                      action.onClick && action.onClick(row, action)
+                    }
+                  >
+                    {action.label}
+                  </Button>
+                ))}
+              </Stack>
+            )}
+          </Stack>
 
-            // // تطبيق المعيار: تجاهل الحقول التي لا تحتوي على تسمية أو قيمة مهمة
-            // if (!label || rawValue === null || rawValue === undefined || rawValue === '') {
-            //   // يمكنك إزالة هذا الشرط إذا أردت عرض جميع الحقول حتى الفارغة منها
-            //   return null;
-            // }
+          <Divider sx={{ mt: 1, mb: 1.5 }} />
 
-            return (
-              // ListItem يُستخدم لتمثيل صف في القائمة
-              <ListItem
-                key={col.name}
-                disablePadding
-                sx={{
-                  py: theme.spacing(1.5), // مسافة عمودية موحدة
-                  borderBottom: `1px solid ${theme.palette.divider}`, // فاصل بين العناصر
-                }}
-              >
-                {/* 2. استغلال المساحة: استخدام Grid لعرض التسمية والقيمة جنباً إلى جنب */}
-                <Grid container spacing={1} alignItems="flex-start">
-                  {/* التسمية: 40% من العرض على الشاشات الكبيرة */}
-                  <Grid item xs={12} sm={4}>
-                    <Typography variant="body2" color="text.primary" sx={{ fontWeight: 'bold' }}>
-                      {label}
-                    </Typography>
-                  </Grid>
+          {visibleTabs && visibleTabs.length > 0 && (
+            <Tabs
+              value={
+                activeTab
+                  ? visibleTabs.findIndex((t) => t.key === activeTab.key)
+                  : 0
+              }
+              onChange={handleChangeTab}
+              variant="scrollable"
+              scrollButtons="auto"
+            >
+              {visibleTabs.map((tab) => (
+                <Tab key={tab.key} label={tab.label || tab.key} />
+              ))}
+            </Tabs>
+          )}
+        </Box>
 
-                  {/* القيمة: 60% من العرض على الشاشات الكبيرة */}
-                  <Grid item xs={12} sm={8}>
-                    <Typography
-                      variant="body1"
-                      color="text.secondary"
-                      sx={{
-                        wordBreak: 'break-word', // مهم للتعامل مع النصوص الطويلة
-                        textAlign: { xs: 'right', sm: 'left' }, // تنسيق القيمة
-                      }}
-                    >
-                      {value}
-                    </Typography>
-                  </Grid>
-                </Grid>
-              </ListItem>
-            );
-          })}
-        </List>
+        {/* Body */}
+        <Box
+          sx={{
+            flexGrow: 1,
+            overflow: "auto",
+            px: 2,
+            pb: 2,
+          }}
+        >
+          {activeTab && renderTabContent(activeTab)}
+        </Box>
+
+        {/* Footer */}
+        {DrawerFooter && (
+          <Box
+            sx={{
+              borderTop: (theme) => `1px solid ${theme.palette.divider}`,
+              p: 2,
+            }}
+          >
+            {typeof DrawerFooter === "function"
+              ? DrawerFooter(row)
+              : DrawerFooter}
+          </Box>
+        )}
       </Box>
     </Drawer>
   );
