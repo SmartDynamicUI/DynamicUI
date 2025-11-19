@@ -1,10 +1,10 @@
 // SmartDataGrid.jsx
-import { useEffect, useState, useMemo } from "react";
-import { DataGrid } from "@mui/x-data-grid";
-import RowDrawer from "./RowDrawer"; // تأكد من المسار الصحيح
+import { useEffect, useState, useMemo } from 'react';
+import { DataGrid } from '@mui/x-data-grid';
 
-import { buildColumns } from "../core/dataGridEngine/columnBuilder/columnBuilder.js";
-import { fetchPagedData } from "../core/dataGridEngine/dataFetcher/DataFetcher.js";
+import { buildColumns } from '../core/dataGridEngine/columnBuilder/columnBuilder.js';
+import { fetchPagedData } from '../core/dataGridEngine/dataFetcher/DataFetcher.js';
+import SmartModal from './SmartModal';
 
 export function SmartDataGrid({
   table,
@@ -12,27 +12,24 @@ export function SmartDataGrid({
   FieldsShow = [],
   roles = [],
   actions = [],
-  initialPageSize = 3,
-  pageSizeOptions = [3],
+  initialPageSize = 20,
+  pageSizeOptions = [10, 20, 50, 100],
   getRowId,
 
-  // ✅ خصائص الـ Drawer الجديدة
+  // ✅ نفس خصائص الدروار لكن تُستخدم الآن للـ Modal
   DrawerTabs = [],
   DrawerHideFields = [],
   DrawerTitle,
-  drawerWidth,
-  DrawerStyle,
+  drawerWidth, // لن يُستخدم الآن لكن نتركه للتوافق
+  DrawerStyle, // لن يُستخدم الآن لكن نتركه للتوافق
   DrawerActions = [],
   DrawerFooter,
   DrawerTabsVisible,
   customTabRenderer = {},
   lazyTabs = true,
   initialTab,
-  onTabChange,
-  onBeforeOpen, // شرط قبل فتح الدروار
-
-  // (اختياري) لو حبيت تمنع فتح Drawer في جريد داخلي
-  disableDrawer = false,
+  onTabChange, // حالياً لا نستخدمه، ممكن تفعيله لاحقاً
+  onBeforeOpen, // شرط قبل فتح الـ Modal
 
   // أي خصائص أخرى مستقبلًا
   ...rest
@@ -44,43 +41,39 @@ export function SmartDataGrid({
   const [loading, setLoading] = useState(false);
 
   const [selectedRow, setSelectedRow] = useState(null);
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
 
-  // 👇 مثال مبسّط لجلب البيانات (عدّله حسب مشروعك)
-useEffect(() => {
-  let isMounted = true;
-  setLoading(true);
+  // 🔹 جلب البيانات من smart-grid
+  useEffect(() => {
+    let isMounted = true;
+    setLoading(true);
 
-fetchPagedData(table, page + 1, 3)   // ← فقط صفين في كل صفحة
-    .then((res) => {
-            console.log("SMART DATA GRID RESPONSE:", res);
+    fetchPagedData(table, page + 1, pageSize)
+      .then((res) => {
+        console.log('SMART DATA GRID RESPONSE:', res);
 
-      if (!isMounted) return;
-      setRows(res.rows || res.data?.records || []);
-setRowCount(res.total || res.data?.total || 0);
+        if (!isMounted) return;
+        setRows(res.rows || res.data?.records || []);
+        setRowCount(res.total || res.data?.total || 0);
+      })
+      .finally(() => isMounted && setLoading(false));
 
-    })
-    .finally(() => isMounted && setLoading(false));
+    return () => (isMounted = false);
+  }, [table, page, pageSize]);
 
-  return () => (isMounted = false);
-}, [table, page, pageSize]);
-
-
+  // 🔹 بناء الأعمدة من السكيما
   const columns = useMemo(
     () =>
-  buildColumns({
-  tableSchema: { columns: schema[table] },   // ← الحل
-  FieldsShow,
-  actions,
-})
-,
+      buildColumns({
+        tableSchema: { columns: schema[table] },
+        FieldsShow,
+        actions,
+      }),
     [table, schema, FieldsShow, actions]
   );
 
-  // ✅ هنا نطبّق onBeforeOpen قبل فتح الدروار
+  // 🔹 التحكم بفتح المودال عند الضغط على صف
   const handleRowClick = (params) => {
-    if (disableDrawer) return; // للـ nested grids لو حبيت
-
     const row = params.row;
 
     if (onBeforeOpen) {
@@ -89,7 +82,7 @@ setRowCount(res.total || res.data?.total || 0);
     }
 
     setSelectedRow(row);
-    setDrawerOpen(true);
+    setModalOpen(true);
   };
 
   return (
@@ -108,33 +101,28 @@ setRowCount(res.total || res.data?.total || 0);
         rowsPerPageOptions={pageSizeOptions}
         getRowId={getRowId}
         onRowClick={handleRowClick}
+        sx={{ height: '100%' }}
         {...rest}
-        sx={{ height: "100%" }}
       />
 
-      {/* ✅ Drawer ديناميكي مربوط بالـ SmartDataGrid */}
-      {!disableDrawer && (
-        <RowDrawer
-          open={drawerOpen}
-          onClose={() => setDrawerOpen(false)}
-          row={selectedRow}
-          table={table}
-          schema={schema}
-          DrawerTabs={DrawerTabs}
-          DrawerHideFields={DrawerHideFields}
-          DrawerTitle={DrawerTitle}
-          drawerWidth={drawerWidth}
-          DrawerStyle={DrawerStyle}
-          DrawerActions={DrawerActions}
-          DrawerFooter={DrawerFooter}
-          DrawerTabsVisible={DrawerTabsVisible}
-          customTabRenderer={customTabRenderer}
-          lazyTabs={lazyTabs}
-          initialTab={initialTab}
-          onTabChange={onTabChange}
-          roles={roles}
-        />
-      )}
+      {/* ✅ SmartModal بدل RowDrawer */}
+      <SmartModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        table={table}
+        row={selectedRow}
+        schema={schema}
+        DrawerTabs={DrawerTabs}
+        DrawerHideFields={DrawerHideFields}
+        DrawerTitle={DrawerTitle}
+        DrawerActions={DrawerActions}
+        DrawerFooter={DrawerFooter}
+        DrawerTabsVisible={DrawerTabsVisible}
+        customTabRenderer={customTabRenderer}
+        lazyTabs={lazyTabs}
+        initialTab={initialTab}
+        roles={roles}
+      />
     </>
   );
 }

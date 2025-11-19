@@ -65,20 +65,19 @@ export default function RefugeesGrid() {
     load();
   }, []);
 
+  // تحويل السكيما إلى الشكل المطلوب
+  const uiSchema = useMemo(() => {
+    if (!schema) return null;
 
-// تحويل السكيما إلى الشكل المطلوب
-const uiSchema = useMemo(() => {
-  if (!schema) return null;
+    const out = {};
+    for (let table in schema) {
+      out[table] = schema[table].columns;
+    }
+    return out;
+  }, [schema]);
 
-  const out = {};
-  for (let table in schema) {
-    out[table] = schema[table].columns; 
-  }
-  return out;
-}, [schema]);
-
-  console.log('schema',schema);
-    if (!schema) return <div>Loading...</div>;
+  console.log('schema', schema);
+  if (!schema) return <div>Loading...</div>;
 
   return (
     <div style={{ padding: 20 }}>
@@ -93,32 +92,52 @@ const uiSchema = useMemo(() => {
         initialPageSize={2}
         pageSizeOptions={[2, 5, 10, 20]} // ← أضف هذه
       /> */}
-      <Box sx={{ height: "calc(100vh - 200px)" }}> 
+      <Box sx={{ height: 'calc(100vh - 200px)' }}>
         <SmartDataGrid
-        table="refugees"
- schema={uiSchema} 
- FieldsShow={['id', 'frist_name', 'gender', 'gov_label']}
-        DrawerTabs={[
-          { key: 'basic', label: 'الأساسي', type: 'form' },
-          { key: 'family', label: 'العائلة', type: 'grid', table: 'family_members' },
-          { key: 'files', label: 'الملفات', type: 'grid', table: 'refugee_files' },
-        ]}
-        DrawerHideFields={['created_at', 'updated_at']}
-        DrawerTitle={(row) => `تفاصيل اللاجئ رقم ${row.id}`}
-        drawerWidth={500}
-        DrawerStyle={{ background: '#fafafa' }}
-        DrawerActions={[{ key: 'edit', label: 'تعديل', onClick: (row) => console.log(row) }]}
-        DrawerFooter={(row) => `آخر تحديث: ${row.updated_at}`}
-        DrawerTabsVisible={(key) => key !== 'files'}
-        customTabRenderer={{
-          family: ({ row }) => <div>عدد أفراد العائلة: {row.familyCount}</div>,
-        }}
-        lazyTabs={true}
-        initialTab="basic"
-        onTabChange={(key) => console.log('Tab:', key)}
-        onBeforeOpen={(row) => row.status !== 'blocked'}
-      /></Box>
-
+          table="refugees"
+          schema={uiSchema}
+          FieldsShow={['id', 'frist_name', 'gender', 'gov_label']}
+          // DrawerTabs={[
+          //   { key: 'basic', label: 'الأساسي', type: 'form' },
+          //   {
+          //     key: 'family',
+          //     label: 'العائلة',
+          //     type: 'form',
+          //     table: 'family_members',
+          //   },
+          //   { key: 'files', label: 'الملفات', type: 'grid', table: 'refugee_files' },
+          // ]}
+          DrawerTabs={[
+            {
+              key: 'basic',
+              label: 'الأساسي',
+              type: 'form',
+              table: 'refugees', // ← جدول الأساسي
+            },
+            {
+              key: 'family',
+              label: 'أفراد العائلة',
+              type: 'table',
+              table: 'family_members',
+              nameColumn: 'refugee_id', // 🔥 الربط
+            },
+          ]}
+          DrawerHideFields={['created_at', 'updated_at']}
+          DrawerTitle={(row) => `تفاصيل اللاجئ رقم ${row.id}`}
+          drawerWidth={500}
+          DrawerStyle={{ background: '#fafafa' }}
+          DrawerActions={[{ key: 'edit', label: 'تعديل', onClick: (row) => console.log(row) }]}
+          DrawerFooter={(row) => (row ? `آخر تحديث: ${row.updated_at || '—'}` : '—')}
+          DrawerTabsVisible={(key) => key !== 'files'}
+          customTabRenderer={{
+            family: ({ row }) => <div>عدد أفراد العائلة: {row.familyCount}</div>,
+          }}
+          lazyTabs={true}
+          initialTab="basic"
+          onTabChange={(key) => console.log('Tab:', key)}
+          onBeforeOpen={(row) => row.status !== 'blocked'}
+        />
+      </Box>
     </div>
   );
 }
