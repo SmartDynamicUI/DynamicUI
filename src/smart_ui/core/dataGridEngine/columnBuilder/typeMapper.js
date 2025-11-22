@@ -1,33 +1,49 @@
-
-export function mapDbTypeToUi(dbType, columnName = "") {
-  if (!dbType) return { type: "string", filter: "text" };
+export function mapDbTypeToUi(dbType, columnName = '', demoMode = false) {
+  if (!dbType) {
+    return {
+      type: 'string',
+      filter: demoMode ? null : 'text',
+    };
+  }
 
   const t = dbType.toLowerCase();
-
-  if (t.includes("int") || t.includes("numeric") || t.includes("decimal")) {
-    return { type: "number", filter: "numberRange" };
-  }
-
-  if (t.includes("date") || t.includes("time")) {
-    return { type: "date", filter: "dateRange" };
-  }
-
-  if (t.includes("bool")) {
-    return { type: "boolean", filter: "boolean" };
-  }
-
   const cn = columnName.toLowerCase();
-  if (cn.includes("photo") || cn.includes("image") || cn.includes("file")) {
-    return { type: "image", filter: null };
+
+  // ===================================================================
+  // 🔵 DEMO MODE — تعطيل الفلاتر بالكامل
+  // ===================================================================
+  const noFilter = demoMode ? null : undefined;
+
+  // رقم
+  if (t.includes('int') || t.includes('numeric') || t.includes('decimal')) {
+    return { type: 'number', filter: demoMode ? null : 'numberRange' };
   }
 
-  if (t.includes("char") || t.includes("text") || t.includes("uuid")) {
-    return { type: "string", filter: "text" };
+  // تاريخ / وقت
+  if (t.includes('date') || t.includes('time')) {
+    return { type: 'date', filter: demoMode ? null : 'dateRange' };
   }
 
-  if (t.includes("json")) {
-    return { type: "json", filter: null };
+  // Boolean
+  if (t.includes('bool')) {
+    return { type: 'boolean', filter: demoMode ? null : 'boolean' };
   }
 
-  return { type: "string", filter: "text" };
+  // صور / ملفات
+  if (cn.includes('photo') || cn.includes('image') || cn.includes('file')) {
+    return { type: 'image', filter: null };
+  }
+
+  // نصوص + UUID
+  if (t.includes('char') || t.includes('text') || t.includes('uuid')) {
+    return { type: 'string', filter: demoMode ? null : 'text' };
+  }
+
+  // JSON
+  if (t.includes('json')) {
+    return { type: 'json', filter: null };
+  }
+
+  // الافتراضي
+  return { type: 'string', filter: demoMode ? null : 'text' };
 }

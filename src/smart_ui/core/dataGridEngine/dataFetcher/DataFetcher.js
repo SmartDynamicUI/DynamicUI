@@ -1,33 +1,23 @@
+import { httpGet } from '../../schemaEngine/httpClient/HttpClient.js';
 
-// import { httpGet } from "../../schemaEngine/httpClient/HttpClient.js";
+export async function fetchPagedData(table, page, pageSize, demoMode = false) {
+  // ==================================================================
+  // 🔵 DEMO MODE — لا API على الإطلاق
+  // ==================================================================
+  if (demoMode) {
+    return {
+      rows: [],
+      total: 0,
+    };
+  }
 
-// export async function fetchPagedData(table, page, pageSize) {
-//   const url = `/api/smart-grid/${table}?page=${page}&pageSize=${pageSize}`;
-
-//   return await httpGet(url);
-// }
-
-// DataFetcher.js
-// مسؤولة عن جلب البيانات من الـ API باستخدام HttpClient الموجود عندك في schemaEngine
-
-import { httpGet } from "../../schemaEngine/httpClient/HttpClient.js";
-
-/**
- * يجلب صفحة من البيانات لجدول معيّن من الـ API.
- *
- * @param {string} table     اسم الجدول في الـ API (مثلاً "refugees")
- * @param {number} page      رقم الصفحة (1-based في الـ API)
- * @param {number} pageSize  عدد السجلات في كل صفحة
- *
- * @returns Promise<{ rows: any[], total: number }>
- */
-export async function fetchPagedData(table, page, pageSize) {
-  // مسار الـ API — عدّله لو مسارك مختلف
+  // ==================================================================
+  // 🔵 الوضع الطبيعي مع API
+  // ==================================================================
   const url = `http://127.0.0.1:9001/api/mains/smart-grid/${table}?page=${page}&pageSize=${pageSize}`;
 
   const res = await httpGet(url);
 
-  // هنا نفترض أن الـ API يرجع: { success, data: { records, total } }
   if (res && res.success && res.data) {
     return {
       rows: res.data.records || [],
@@ -35,6 +25,5 @@ export async function fetchPagedData(table, page, pageSize) {
     };
   }
 
-  // في حال فشل الاستجابة أو شكل مختلف
   return { rows: [], total: 0 };
 }

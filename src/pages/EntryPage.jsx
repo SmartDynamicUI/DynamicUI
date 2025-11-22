@@ -1,6 +1,6 @@
 import * as React from 'react';
-import { useEffect, useState, useCallback, useMemo } from 'react';
-import { Drawer, IconButton, Divider, Grid, Avatar, Paper } from '@mui/material';
+import { useEffect, useState, useCallback, useMemo, useContext } from 'react';
+import { Drawer, Button, IconButton, Divider, Grid, Avatar, Paper } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import Box from '@mui/material/Box';
 import { DataGrid, GridToolbar } from '@mui/x-data-grid'; // إضافة GridToolbar
@@ -8,7 +8,7 @@ import { useApi } from '../utils';
 import { DangerMsg } from '../components/NotificationMsg';
 import { Stack, Typography } from '@mui/material';
 import { format } from 'date-fns'; // مكتبة احترافية للتعامل مع التواريخ
-import { ar } from 'date-fns/locale'; // استيراد اللغة العربية
+import { ar, vi } from 'date-fns/locale'; // استيراد اللغة العربية
 import { auth } from 'src/firebase.config';
 import {
   initSchemaEngine,
@@ -17,45 +17,24 @@ import {
   getObjectTemplate,
   getFields,
 } from '../smart_ui/core/schemaEngine/index.js';
+import { appContext } from '../context/appContext';
 
 import { SmartDataGrid } from '../smart_ui/components/SmartDataGrid';
 import { memoryCache } from '../smart_ui/core/schemaEngine/schemaCache/SchemaCache'; // أو من الـ store عندك
+import { add } from 'lodash';
 
 const API_BASE_URL = process.env.REACT_APP_SCHEMA_ENDPOINT;
 
 export default function RefugeesGrid() {
   const api = useApi();
-
-  //     const schema = memoryCache.schemas; // أو من context
-
-  // console.log('schema columins',schema['refugees']);
+  const { user } = useContext(appContext);
+  const userRoles = user?.roles || [];
+  console.log('User Roles:', userRoles);
 
   const [schema, setSchema] = useState(null);
   const [columns, setColumns] = useState([]);
   const [template, setTemplate] = useState({});
   const [fields, setFields] = useState([]);
-
-  // useEffect(() => {
-  //   async function load() {
-  //     // 1) تشغيل المحرك لأول مرة
-  //     await initSchemaEngine({
-  //       endpointOverride: API_BASE_URL,
-  //     });
-  //     const table='refugees'
-  //     // 2) اختيار أي جدول تريده (هنا refugees)
-  //     const s = getSchema(table);
-  //     const cols = getColumns(table);
-  //     const temp = getObjectTemplate(table);
-  //     const f = getFields(table);
-
-  //     setSchema(s);
-  //     setColumns(cols);
-  //     setTemplate(temp);
-  //     setFields(f);
-  //   }
-
-  //   load();
-  // }, []);
 
   useEffect(() => {
     async function load() {
@@ -78,35 +57,17 @@ export default function RefugeesGrid() {
 
   console.log('schema', schema);
   if (!schema) return <div>Loading...</div>;
-
+  console.log('console.log(userRoles)  in EntryPage is ---> ', userRoles);
   return (
     <div style={{ padding: 20 }}>
       <h2>Schema Example Me</h2>
 
-      {/* <SmartDataGrid
-        table="refugees"
-        schema={schema['refugees']} // ← سكيما جدول واحد
-        FieldsShow={['id', 'frist_name', 'origin_country', 'birth_place', 'gender', 'gov_label']} // الأعمدة التي تريد إظهارها فقط
-        //
-        // actions={["edit", "delete"]}           // مستقبلاً نربطها بأزرار
-        initialPageSize={2}
-        pageSizeOptions={[2, 5, 10, 20]} // ← أضف هذه
-      /> */}
       <Box sx={{ height: 'calc(100vh - 200px)' }}>
         <SmartDataGrid
           table="refugees"
-          schema={uiSchema}
+          schema={schema}
           FieldsShow={['id', 'frist_name', 'gender', 'gov_label']}
-          // DrawerTabs={[
-          //   { key: 'basic', label: 'الأساسي', type: 'form' },
-          //   {
-          //     key: 'family',
-          //     label: 'العائلة',
-          //     type: 'form',
-          //     table: 'family_members',
-          //   },
-          //   { key: 'files', label: 'الملفات', type: 'grid', table: 'refugee_files' },
-          // ]}
+          userRoles={userRoles}
           DrawerTabs={[
             {
               key: 'basic',
@@ -120,18 +81,36 @@ export default function RefugeesGrid() {
               type: 'table',
               table: 'family_members',
               nameColumn: 'refugee_id', // 🔥 الربط
+              // hideFields: ['first_name_member'],
+              permissions: {
+                view: true,
+                edit: true,
+                delete: ['data_entry'],
+                // delete: true,
+                // delete: false,
+                // add: ['data_entry'],
+              },
+            },
+            {
+              key: 'stages',
+              label: 'المراحل',
+              type: 'table',
+              table: 'request_stages',
+              nameColumn: 'request_id', // 🔥 الربط
             },
           ]}
           DrawerHideFields={['created_at', 'updated_at']}
-          DrawerTitle={(row) => `تفاصيل اللاجئ رقم ${row.id}`}
+          DrawerTitle={(row) => (row ? `تفاصيل اللاجئ رقم ${row.id}` : 'تفاصيل اللاجئ')}
           drawerWidth={500}
           DrawerStyle={{ background: '#fafafa' }}
-          DrawerActions={[{ key: 'edit', label: 'تعديل', onClick: (row) => console.log(row) }]}
+          DrawerActions={[
+            <Button key="edit" onClick={() => console.log('edit')}>
+              تعديل
+            </Button>,
+          ]}
           DrawerFooter={(row) => (row ? `آخر تحديث: ${row.updated_at || '—'}` : '—')}
           DrawerTabsVisible={(key) => key !== 'files'}
-          customTabRenderer={{
-            family: ({ row }) => <div>عدد أفراد العائلة: {row.familyCount}</div>,
-          }}
+          customTabRenderer={{}}
           lazyTabs={true}
           initialTab="basic"
           onTabChange={(key) => console.log('Tab:', key)}

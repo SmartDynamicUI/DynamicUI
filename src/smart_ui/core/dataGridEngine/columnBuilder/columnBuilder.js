@@ -1,5 +1,5 @@
-import { mapDbTypeToUi } from "./typeMapper.js";
-import { createColumn } from "./columnFactory.js";
+import { mapDbTypeToUi } from './typeMapper.js';
+import { createColumn } from './columnFactory.js';
 
 export function buildColumns({
   tableSchema,
@@ -7,17 +7,17 @@ export function buildColumns({
   roles = [],
   currentUserRoles = [],
   actions = [],
+  demoMode = false, // 🔵 تمت إضافة هذا
 }) {
   if (!tableSchema || !tableSchema.columns) return [];
 
   const columns = [];
 
-  tableSchema.columns.forEach(col => {
-    const columnName = col.name;       // ← تعديل 1
-    const dataType = col.db_type;      // ← تعديل 2
+  tableSchema.columns.forEach((col) => {
+    const columnName = col.name;
+    const dataType = col.db_type;
     const comment = col.comment;
 
-    // إذا لم يكن العمود ضمن FieldsShow → تجاهله
     if (FieldsShow.length && !FieldsShow.includes(columnName)) {
       return;
     }
@@ -36,14 +36,14 @@ export function buildColumns({
     if (column) columns.push(column);
   });
 
-  // إضافة عمود الـ Actions
-  if (actions.length) {
+  if (actions.length && !demoMode) {
+    // 🔵 منع Actions في Demo Mode
     columns.push({
-      field: "__actions",
-      headerName: "Actions",
+      field: '__actions',
+      headerName: 'Actions',
       width: 150,
       sortable: false,
-      type: "actions",
+      type: 'actions',
       actions,
     });
   }

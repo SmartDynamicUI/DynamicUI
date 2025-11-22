@@ -1,37 +1,36 @@
-// SmartDataGrid.jsx
 import { useEffect, useState, useMemo } from 'react';
 import { DataGrid } from '@mui/x-data-grid';
 
 import { buildColumns } from '../core/dataGridEngine/columnBuilder/columnBuilder.js';
 import { fetchPagedData } from '../core/dataGridEngine/dataFetcher/DataFetcher.js';
-import SmartModal from './SmartModal';
+import SmartModal from '../components/SmartModal/SmartModal.jsx';
 
 export function SmartDataGrid({
   table,
   schema,
   FieldsShow = [],
-  roles = [],
+  userRoles = [],
   actions = [],
   initialPageSize = 20,
   pageSizeOptions = [10, 20, 50, 100],
   getRowId,
 
-  // ✅ نفس خصائص الدروار لكن تُستخدم الآن للـ Modal
+  demoMode = false,
+
   DrawerTabs = [],
   DrawerHideFields = [],
   DrawerTitle,
-  drawerWidth, // لن يُستخدم الآن لكن نتركه للتوافق
-  DrawerStyle, // لن يُستخدم الآن لكن نتركه للتوافق
+  drawerWidth,
+  DrawerStyle,
   DrawerActions = [],
   DrawerFooter,
   DrawerTabsVisible,
   customTabRenderer = {},
   lazyTabs = true,
   initialTab,
-  onTabChange, // حالياً لا نستخدمه، ممكن تفعيله لاحقاً
-  onBeforeOpen, // شرط قبل فتح الـ Modal
+  onTabChange,
+  onBeforeOpen,
 
-  // أي خصائص أخرى مستقبلًا
   ...rest
 }) {
   const [rows, setRows] = useState([]);
@@ -43,38 +42,83 @@ export function SmartDataGrid({
   const [selectedRow, setSelectedRow] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
 
-  // 🔹 جلب البيانات من smart-grid
+  // -------------------------------------------------------------
+  // 1) LOG: السكيما التي تصل إلى SmartDataGrid
+  // -------------------------------------------------------------
+  console.log('📘 [SmartDataGrid] Incoming schema:', schema);
+  console.log('📘 [SmartDataGrid] Schema for table:', table, schema?.[table]);
+
+  // DEMO MODE
   useEffect(() => {
+    if (demoMode) {
+      console.log('🔵 DEMO MODE → SmartDataGrid uses empty rows only');
+      setLoading(false);
+      setRows([]);
+      setRowCount(0);
+      return;
+    }
+  }, [demoMode, table]);
+
+  // -------------------------------------------------------------
+  // 2) LOG: جلب البيانات الفعلية من API
+  // -------------------------------------------------------------
+  useEffect(() => {
+    if (demoMode) return;
+
     let isMounted = true;
     setLoading(true);
 
     fetchPagedData(table, page + 1, pageSize)
       .then((res) => {
-        console.log('SMART DATA GRID RESPONSE:', res);
+        console.log('📘 [SmartDataGrid] API RESULT:', res);
 
         if (!isMounted) return;
-        setRows(res.rows || res.data?.records || []);
-        setRowCount(res.total || res.data?.total || 0);
+
+        if (!res || !res.rows) {
+          setRows([]);
+          setRowCount(0);
+        } else {
+          setRows(res.rows || []);
+          setRowCount(res.total || 0);
+        }
+      })
+      .catch((e) => {
+        console.log('❌ [SmartDataGrid] API ERROR:', e);
+        setRows([]);
+        setRowCount(0);
       })
       .finally(() => isMounted && setLoading(false));
 
     return () => (isMounted = false);
-  }, [table, page, pageSize]);
+  }, [table, page, pageSize, demoMode]);
 
-  // 🔹 بناء الأعمدة من السكيما
-  const columns = useMemo(
-    () =>
-      buildColumns({
-        tableSchema: { columns: schema[table] },
-        FieldsShow,
-        actions,
-      }),
-    [table, schema, FieldsShow, actions]
-  );
+  // -------------------------------------------------------------
+  // 3) LOG: الأعمدة التي يتم بناؤها فعليًا
+  // -------------------------------------------------------------
+  const columns = useMemo(() => {
+    console.log('📘 [SmartDataGrid] Building columns for:', table);
 
-  // 🔹 التحكم بفتح المودال عند الضغط على صف
+    // LOG: سكيما الجدول بشكل مباشر
+    console.log('📘 [SmartDataGrid] Table Schema:', schema?.[table]);
+    console.log('📘 [SmartDataGrid] Table Columns:', schema?.[table]?.columns);
+
+    return buildColumns({
+      tableSchema: { columns: schema[table].columns },
+      FieldsShow,
+      actions,
+    });
+  }, [table, schema, FieldsShow, actions]);
+
+  console.log('📘 [SmartDataGrid] Final Columns:', columns);
+
+  // -------------------------------------------------------------
+  // 4) LOG: عند الضغط على صف لفتح SmartModal
+  // -------------------------------------------------------------
   const handleRowClick = (params) => {
+    if (demoMode) return;
+
     const row = params.row;
+    console.log('📗 [SmartDataGrid] Selected row:', row);
 
     if (onBeforeOpen) {
       const allow = onBeforeOpen(row);
@@ -84,6 +128,7 @@ export function SmartDataGrid({
     setSelectedRow(row);
     setModalOpen(true);
   };
+  console.log('console.log(userRoles) in SmartDataGrid --->  data_entry', userRoles);
 
   return (
     <>
@@ -92,7 +137,7 @@ export function SmartDataGrid({
         columns={columns}
         loading={loading}
         paginationMode="server"
-        pagination
+        pagination={!demoMode}
         rowCount={rowCount}
         page={page}
         pageSize={pageSize}
@@ -104,8 +149,7 @@ export function SmartDataGrid({
         sx={{ height: '100%' }}
         {...rest}
       />
-
-      {/* ✅ SmartModal بدل RowDrawer */}
+      {/* SmartModal */}
       <SmartModal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
@@ -121,7 +165,8 @@ export function SmartDataGrid({
         customTabRenderer={customTabRenderer}
         lazyTabs={lazyTabs}
         initialTab={initialTab}
-        roles={roles}
+        roles={userRoles}
+        demoMode={demoMode}
       />
     </>
   );
