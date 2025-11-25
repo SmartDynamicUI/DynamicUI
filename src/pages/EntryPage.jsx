@@ -67,7 +67,7 @@ export default function RefugeesGrid() {
           table="refugees"
           schema={schema}
           FieldsShow={['id', 'frist_name', 'gender', 'gov_label']}
-          userRoles={userRoles}
+          // userRoles={userRoles}
           DrawerTabs={[
             {
               key: 'basic',
