@@ -4,6 +4,7 @@ import { DataGrid } from '@mui/x-data-grid';
 import { buildColumns } from '../core/dataGridEngine/columnBuilder/columnBuilder.js';
 import { fetchPagedData } from '../core/dataGridEngine/dataFetcher/DataFetcher.js';
 import SmartModal from '../components/SmartModal/SmartModal.jsx';
+import { SmartActions } from '../core/permissions/smartActions.js';
 
 export function SmartDataGrid({
   table,
@@ -16,6 +17,7 @@ export function SmartDataGrid({
   getRowId,
 
   demoMode = false,
+  permissions = {},   // 👈 تمت إضافتها هنا
 
   DrawerTabs = [],
   DrawerHideFields = [],
@@ -124,6 +126,18 @@ export function SmartDataGrid({
       const allow = onBeforeOpen(row);
       if (allow === false) return;
     }
+
+    const allowOpen = SmartActions.can(
+    "open",
+    permissions?.modal || {},   // صلاحيات المودل فقط
+    {},                          // لا Overrides على مستوى التاب
+    userRoles
+  );
+
+  if (!allowOpen) {
+    console.log("⛔ لا توجد صلاحية لفتح المودل");
+    return;
+  }
 
     setSelectedRow(row);
     setModalOpen(true);

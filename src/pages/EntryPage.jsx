@@ -35,6 +35,13 @@ export default function RefugeesGrid() {
   const [columns, setColumns] = useState([]);
   const [template, setTemplate] = useState({});
   const [fields, setFields] = useState([]);
+const permissions = {
+  modal: {
+    open: ["admin", "data_entry", "reviewer"] // ← أدوار مسموحة
+  }
+};
+
+
 
   useEffect(() => {
     async function load() {
@@ -57,7 +64,10 @@ export default function RefugeesGrid() {
 
   console.log('schema', schema);
   if (!schema) return <div>Loading...</div>;
-  console.log('console.log(userRoles)  in EntryPage is ---> ', userRoles);
+  console.log('           permissions={permissions} ---> ',           {permissions}  
+);
+
+  
   return (
     <div style={{ padding: 20 }}>
       <h2>Schema Example Me</h2>
@@ -115,6 +125,7 @@ export default function RefugeesGrid() {
           initialTab="basic"
           onTabChange={(key) => console.log('Tab:', key)}
           onBeforeOpen={(row) => row.status !== 'blocked'}
+          permissions={permissions}  
         />
       </Box>
     </div>
