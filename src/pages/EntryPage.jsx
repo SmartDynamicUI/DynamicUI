@@ -3,12 +3,12 @@ import { useEffect, useState, useCallback, useMemo, useContext } from 'react';
 import { Drawer, Button, IconButton, Divider, Grid, Avatar, Paper } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import Box from '@mui/material/Box';
-import { DataGrid, GridToolbar } from '@mui/x-data-grid'; // إضافة GridToolbar
+import { DataGrid, GridToolbar } from '@mui/x-data-grid';
 import { useApi } from '../utils';
 import { DangerMsg } from '../components/NotificationMsg';
 import { Stack, Typography } from '@mui/material';
-import { format } from 'date-fns'; // مكتبة احترافية للتعامل مع التواريخ
-import { ar, vi } from 'date-fns/locale'; // استيراد اللغة العربية
+import { format } from 'date-fns';
+import { ar, vi } from 'date-fns/locale';
 import { auth } from 'src/firebase.config';
 import {
   initSchemaEngine,
@@ -17,10 +17,13 @@ import {
   getObjectTemplate,
   getFields,
 } from '../smart_ui/core/schemaEngine/index.js';
+import globalPermissions from '../smart_ui/core/globalPermissions';
+import refugeesPermissions from '../smart_ui/core/refugeesPermissions';
+import { mergePermissions } from '../smart_ui/core/mergePermissions';
 import { appContext } from '../context/appContext';
 
 import { SmartDataGrid } from '../smart_ui/components/SmartDataGrid';
-import { memoryCache } from '../smart_ui/core/schemaEngine/schemaCache/SchemaCache'; // أو من الـ store عندك
+import { memoryCache } from '../smart_ui/core/schemaEngine/schemaCache/SchemaCache';
 import { add } from 'lodash';
 
 const API_BASE_URL = process.env.REACT_APP_SCHEMA_ENDPOINT;
@@ -29,19 +32,14 @@ export default function RefugeesGrid() {
   const api = useApi();
   const { user } = useContext(appContext);
   const userRoles = user?.roles || [];
-  console.log('User Roles:', userRoles);
 
   const [schema, setSchema] = useState(null);
   const [columns, setColumns] = useState([]);
   const [template, setTemplate] = useState({});
   const [fields, setFields] = useState([]);
-const permissions = {
-  modal: {
-    open: ["admin", "data_entry", "reviewer"] // ← أدوار مسموحة
-  }
-};
 
-
+  // دمج الصلاحيات العامة + الخاصة بصفحة اللاجئين
+  const permissions = mergePermissions(globalPermissions, refugeesPermissions);
 
   useEffect(() => {
     async function load() {
@@ -51,7 +49,6 @@ const permissions = {
     load();
   }, []);
 
-  // تحويل السكيما إلى الشكل المطلوب
   const uiSchema = useMemo(() => {
     if (!schema) return null;
 
@@ -62,12 +59,9 @@ const permissions = {
     return out;
   }, [schema]);
 
-  console.log('schema', schema);
   if (!schema) return <div>Loading...</div>;
-  console.log('           permissions={permissions} ---> ',           {permissions}  
-);
+console.log('permissions',{permissions});
 
-  
   return (
     <div style={{ padding: 20 }}>
       <h2>Schema Example Me</h2>
@@ -77,36 +71,26 @@ const permissions = {
           table="refugees"
           schema={schema}
           FieldsShow={['id', 'frist_name', 'gender', 'gov_label']}
-          // userRoles={userRoles}
           DrawerTabs={[
             {
               key: 'basic',
               label: 'الأساسي',
               type: 'form',
-              table: 'refugees', // ← جدول الأساسي
+              table: 'refugees',  nameColumn: 'id',   // 👈 هذا هو المطلوب فقط
             },
             {
               key: 'family',
               label: 'أفراد العائلة',
               type: 'table',
               table: 'family_members',
-              nameColumn: 'refugee_id', // 🔥 الربط
-              // hideFields: ['first_name_member'],
-              permissions: {
-                view: true,
-                edit: true,
-                delete: ['data_entry'],
-                // delete: true,
-                // delete: false,
-                // add: ['data_entry'],
-              },
+              nameColumn: 'refugee_id',
             },
             {
               key: 'stages',
               label: 'المراحل',
               type: 'table',
               table: 'request_stages',
-              nameColumn: 'request_id', // 🔥 الربط
+              nameColumn: 'request_id',
             },
           ]}
           DrawerHideFields={['created_at', 'updated_at']}
@@ -125,7 +109,8 @@ const permissions = {
           initialTab="basic"
           onTabChange={(key) => console.log('Tab:', key)}
           onBeforeOpen={(row) => row.status !== 'blocked'}
-          permissions={permissions}  
+          permissions={permissions}      // 👈 الصلاحيات الموحدة
+          userRoles={userRoles}          // 👈 أدوار المستخدم
         />
       </Box>
     </div>

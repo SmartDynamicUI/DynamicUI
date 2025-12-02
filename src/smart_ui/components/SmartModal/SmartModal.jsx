@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Box, Modal, Tabs, Tab, CircularProgress, Typography } from '@mui/material';
 
@@ -14,15 +13,18 @@ export default function SmartModal({
   schema,
   DrawerTabs = [],
   DrawerHideFields = [],
-  DrawerTabsVisible,
   DrawerTitle,
+  DrawerActions = [],
   DrawerFooter,
-  roles = [],
+  DrawerTabsVisible,
+  customTabRenderer = {},
   lazyTabs = true,
   initialTab,
   demoMode = false,
+  roles = [],
+  permissions = {},       // 👈 الصلاحيات النهائية (global + page)
 }) {
-  // ⬅️ Hook: إدارة التابات + البيانات + التحميل
+  // 🧠 Hook: إدارة التابات
   const {
     activeTab,
     setActiveTab,
@@ -39,22 +41,22 @@ export default function SmartModal({
     DrawerTabs,
     DrawerTabsVisible,
     roles,
+    permissions,
     lazyTabs,
     demoMode,
     initialTab,
   });
 
-  // تأمين roles كمصفوفة
+  // تحويل roles إلى array دائمًا
   const userRoles = Array.isArray(roles) ? roles : roles ? [roles] : [];
 
-  // ⬅️ الحصول على التاب الحالي
-  const currentTab = visibleTabs.find((t) => t.key === activeTab);
-
-  // =============================
-  // Header
-  // =============================
+  // ============= HEADER =============
   const renderHeader = () => {
-    const title = DrawerTitle ? DrawerTitle(row) : 'التفاصيل';
+    const title =
+      typeof DrawerTitle === 'function'
+        ? DrawerTitle(row)
+        : DrawerTitle || 'تفاصيل السجل';
+
     return (
       <Box
         sx={{
@@ -69,44 +71,54 @@ export default function SmartModal({
     );
   };
 
-  // =============================
-  // محتوى التاب الحالي
-  // =============================
+  // ============= تبويبة المحتوى =============
   const renderTabContent = () => {
+    if (!visibleTabs || visibleTabs.length === 0) {
+      return (
+        <Box sx={{ padding: 2 }}>
+          <Typography>لا توجد تبويبات متاحة.</Typography>
+        </Box>
+      );
+    }
+
+    const currentTab =
+      visibleTabs.find((t) => t.key === activeTab) || visibleTabs[0];
+
     if (!currentTab) {
       return (
         <Box sx={{ padding: 2 }}>
-          <Typography color="error">لا يوجد تبويب نشط.</Typography>
+          <Typography>لم يتم العثور على التاب الحالي.</Typography>
         </Box>
       );
     }
 
-    const { key, type } = currentTab;
-    const dataObj = tabData[key] || {};
+    const key = currentTab.key;
+    const type = currentTab.type || 'form';
 
-    // 🔄 Loading
-    if (tabLoading[key]) {
+    const dataObj = tabData[key] || {};
+    const isLoading = tabLoading[key];
+    const error = tabError[key];
+
+    if (isLoading) {
       return (
         <Box sx={{ padding: 2, textAlign: 'center' }}>
-          <CircularProgress />
+          <CircularProgress size={28} />
         </Box>
       );
     }
 
-    // ⚠ Error
-    if (tabError[key]) {
+    if (error) {
       return (
-        <Box sx={{ padding: 2, color: 'red' }}>
-          خطأ في تحميل البيانات: {tabError[key]}
+        <Box sx={{ padding: 2 }}>
+          <Typography color="error">{String(error)}</Typography>
         </Box>
       );
     }
 
-    // 🟦 FORM TAB → BasicTabRenderer مع إدارة الحقول
+    // FORM TAB
     if (type === 'form') {
       const tableName = currentTab.table || table;
 
-      // دمج الحقول المخفية: من المودال + من التاب نفسه
       const mergedHideFields = [
         ...(DrawerHideFields || []),
         ...(currentTab.hideFields || []),
@@ -122,13 +134,13 @@ export default function SmartModal({
             tableName={tableName}
             hideFields={mergedHideFields}
             userRoles={userRoles}
-            permissions={currentTab.permissions || {}}
+            permissions={permissions}     // 👈 الصلاحيات
           />
         </Box>
       );
     }
 
-    // 🟧 TABLE TAB (nested table)
+    // TABLE TAB
     if (type === 'table') {
       const rows = dataObj.rows || [];
       return (
@@ -139,6 +151,7 @@ export default function SmartModal({
             schema={schema}
             row={row}
             roles={userRoles}
+            permissions={permissions}     // 👈 الصلاحيات
           />
         </Box>
       );
@@ -151,43 +164,76 @@ export default function SmartModal({
     );
   };
 
-  // =============================
-  // Footer
-  // =============================
+  // ============= FOOTER =============
   const renderFooter = () => {
-    if (!DrawerFooter) return null;
+    const footerText =
+      typeof DrawerFooter === 'function' ? DrawerFooter(row) : DrawerFooter;
+
+    if (!DrawerActions?.length && !footerText) return null;
+
     return (
-      <Box sx={{ padding: 2, borderTop: '1px solid #eee' }}>
-        {DrawerFooter(row)}
+      <Box
+        sx={{
+          borderTop: '1px solid #eee',
+          padding: 1.5,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 1,
+        }}
+      >
+        <Box sx={{ display: 'flex', gap: 1 }}>{DrawerActions}</Box>
+        {footerText && (
+          <Typography variant="body2" color="text.secondary">
+            {footerText}
+          </Typography>
+        )}
       </Box>
     );
   };
+
+  if (!open) return null;
+
+  // ===================== 👇 إصلاح الخطأ هنا 👇 =====================
+  const safeTabs = Array.isArray(visibleTabs) ? visibleTabs : [];
+
+  // ==================================================================
+
+  const handleTabChange = (event, newValue) => {
+    setActiveTab(newValue);
+    if (typeof loadTabData === 'function') {
+      loadTabData(newValue);
+    }
+  };
+console.log('SmartModal visibleTabs = ', visibleTabs, 'activeTab = ', activeTab);
 
   return (
     <Modal open={open} onClose={onClose}>
       <Box
         sx={{
-          width: 780,
-          maxHeight: '90vh',
-          overflow: 'auto',
-          bgcolor: 'white',
-          margin: '40px auto',
-          borderRadius: 2,
-          boxShadow: 4,
+          position: 'absolute',
+          right: 40,
+          top: 40,
+          bottom: 40,
+          width: 700,
+          bgcolor: 'background.paper',
+          boxShadow: 24,
+          display: 'flex',
+          flexDirection: 'column',
         }}
       >
+        {/* Header */}
         {renderHeader()}
 
-        {/* التابات */}
+        {/* Tabs Header */}
         <Tabs
           value={activeTab}
-          onChange={(e, val) => {
-            setActiveTab(val);
-            loadTabData(val);
-          }}
+          onChange={handleTabChange}
+          variant="scrollable"
+          scrollButtons="auto"
           sx={{ borderBottom: '1px solid #ddd' }}
         >
-          {visibleTabs.map((tab) => (
+          {safeTabs.map((tab) => (
             <Tab key={tab.key} label={tab.label} value={tab.key} />
           ))}
         </Tabs>

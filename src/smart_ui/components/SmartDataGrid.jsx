@@ -170,6 +170,7 @@ export function SmartDataGrid({
         table={table}
         row={selectedRow}
         schema={schema}
+                permissions={permissions}       // 👈 تمت إضافة هذا فقط
         DrawerTabs={DrawerTabs}
         DrawerHideFields={DrawerHideFields}
         DrawerTitle={DrawerTitle}
@@ -181,6 +182,7 @@ export function SmartDataGrid({
         initialTab={initialTab}
         roles={userRoles}
         demoMode={demoMode}
+
       />
     </>
   );

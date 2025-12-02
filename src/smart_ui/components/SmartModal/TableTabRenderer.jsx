@@ -1,4 +1,3 @@
-
 // TableTabRenderer.jsx
 import React, { useState } from 'react';
 import { Box, Button, Typography } from '@mui/material';
@@ -20,6 +19,7 @@ export function TableTabRenderer({
   schema = {},
   row: parentRow = {},
   roles = [],
+  permissions = {},        // 👈 استقبال الصلاحيات النهائية
 }) {
   const tableName = tab.table;
   const nameColumn = tab.nameColumn; // FK مثل refugee_id
@@ -27,24 +27,16 @@ export function TableTabRenderer({
   // form state
   const [activeEditRowId, setActiveEditRowId] = useState(null);
   const [showAddForm, setShowAddForm] = useState(false);
-
   const [formData, setFormData] = useState({});
 
-  // ⚙️ بناء الحقول مع دعم إخفاء الحقول على مستوى التاب
-  const fields = buildFormFields(schema, tableName, {
-    nameColumn,
-    ignore: tab.hideFields || [],
-  });
+  // استخراج تعريف الحقول من السكيما
+  const tableSchema = schema[tableName] || {};
+  const fields = buildFormFields(tableSchema, { mode: 'table' });
 
-  // ===== الصلاحيات باستخدام SmartActions =====
-  const userRoles = Array.isArray(roles) ? roles : roles ? [roles] : [];
-  const perms = tab.permissions || {};
+  // ===== تهيئة template للسجل الجديد =====
+  const template = tableSchema.objectTemplate || {};
 
-  const canAdd = SmartActions.can('add', {}, perms, userRoles);
-  const canEdit = SmartActions.can('edit', {}, perms, userRoles);
-  const canDelete = SmartActions.can('delete', {}, perms, userRoles);
-
-  // ===== تحميل بيانات السجل عند التعديل =====
+  // ===== بدء تعديل سجل موجود =====
   const handleEdit = (r) => {
     setShowAddForm(false);
     setActiveEditRowId(r.id);
@@ -56,8 +48,6 @@ export function TableTabRenderer({
     setActiveEditRowId(null);
     setShowAddForm(true);
 
-    // تجهيز template من السكيما
-    const template = schema[tableName]?.objectTemplate || {};
     const filled = { ...template };
 
     // ملء الـ FK مثل refugee_id
@@ -78,51 +68,47 @@ export function TableTabRenderer({
   // ===== حفظ (UI فقط - المرحلة الثانية سنربط API) =====
   const handleSave = () => {
     console.log('Saving record:', formData);
-    // API لاحقاً
     setActiveEditRowId(null);
     setShowAddForm(false);
   };
 
-  // ===== تحديث قيمة حقل واحد =====
-  const updateField = (fieldName, value) => {
-    setFormData((prev) => ({ ...prev, [fieldName]: value }));
+  // ===== حذف (UI فقط) =====
+  const handleDelete = (r) => {
+    console.log('Deleting record:', r);
   };
 
-  // ===== رأس الجدول (اسم الأعمدة) =====
-  const headers = fields.filter((f) => !f.hidden).map((f) => f.label);
+  // أدوار المستخدم
+  const userRoles = Array.isArray(roles) ? roles : roles ? [roles] : [];
+
+  // 👈 صلاحيات الجدول من permissions.tables[tableName]
+  const tablePerms = permissions?.tables?.[tableName] || {};
+
+  const canAdd = SmartActions.can('add', {}, tablePerms, userRoles);
+  const canEdit = SmartActions.can('edit', {}, tablePerms, userRoles);
+  const canDelete = SmartActions.can('delete', {}, tablePerms, userRoles);
+
+  // ===== العناوين =====
+  const headers = fields.map((f) => f.label || f.name);
+
+  if (canEdit || canDelete) {
+    headers.push('خيارات');
+  }
 
   return (
-    <Box>
+    <Box sx={{ width: '100%' }}>
       {/* زر الإضافة */}
       {canAdd && (
-        <Box sx={{ marginBottom: 2, textAlign: 'right' }}>
-          <Button variant="contained" color="primary" onClick={handleAdd}>
-            + إضافة
+        <Box sx={{ mb: 1 }}>
+          <Button variant="contained" size="small" onClick={handleAdd}>
+            إضافة سجل جديد
           </Button>
         </Box>
       )}
 
-      {/* فورم الإضافة أعلى الجدول */}
-      {showAddForm && (
-        <InlineFormRenderer
-          mode="add"
-          fields={fields}
-          formData={formData}
-          onChange={updateField}
-          onSave={handleSave}
-          onCancel={handleCancel}
-        />
-      )}
-
-      {/* إذا الجدول فارغ */}
-      {rows.length === 0 && !showAddForm && (
-        <Typography sx={{ opacity: 0.6, padding: 2 }}>
-          لا توجد بيانات متوفرة.
-        </Typography>
-      )}
-
       {/* الجدول */}
-      {rows.length > 0 && (
+      {rows?.length === 0 ? (
+        <Typography sx={{ padding: 2 }}>لا توجد بيانات.</Typography>
+      ) : (
         <Box component="table" sx={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr>
@@ -138,18 +124,6 @@ export function TableTabRenderer({
                   {h}
                 </th>
               ))}
-
-              {(canEdit || canDelete) && (
-                <th
-                  style={{
-                    width: 120,
-                    borderBottom: '1px solid #ddd',
-                    padding: '8px',
-                  }}
-                >
-                  خيارات
-                </th>
-              )}
             </tr>
           </thead>
 
@@ -180,13 +154,21 @@ export function TableTabRenderer({
                       }}
                     >
                       {canEdit && (
-                        <Button size="small" onClick={() => handleEdit(r)}>
+                        <Button
+                          size="small"
+                          variant="text"
+                          onClick={() => handleEdit(r)}
+                        >
                           تعديل
                         </Button>
                       )}
-
                       {canDelete && (
-                        <Button size="small" color="error">
+                        <Button
+                          size="small"
+                          color="error"
+                          variant="text"
+                          onClick={() => handleDelete(r)}
+                        >
                           حذف
                         </Button>
                       )}
@@ -194,15 +176,14 @@ export function TableTabRenderer({
                   )}
                 </tr>
 
-                {/* فورم التعديل يظهر تحت الصف */}
+                {/* صفّ التحرير / الإضافة */}
                 {activeEditRowId === r.id && (
                   <tr>
-                    <td colSpan={headers.length + 1}>
+                    <td colSpan={headers.length}>
                       <InlineFormRenderer
-                        mode="edit"
                         fields={fields}
-                        formData={formData}
-                        onChange={updateField}
+                        value={formData}
+                        onChange={setFormData}
                         onSave={handleSave}
                         onCancel={handleCancel}
                       />
@@ -211,6 +192,8 @@ export function TableTabRenderer({
                 )}
               </React.Fragment>
             ))}
+
+            {/* صف الإضافة المنفصل */}
           </tbody>
         </Box>
       )}
