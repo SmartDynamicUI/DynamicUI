@@ -39,7 +39,7 @@ export default function RefugeesGrid() {
   const [fields, setFields] = useState([]);
 
   // دمج الصلاحيات العامة + الخاصة بصفحة اللاجئين
-  const permissions = mergePermissions(globalPermissions, refugeesPermissions);
+  const permissionsMerged = mergePermissions(globalPermissions, refugeesPermissions);
 
   useEffect(() => {
     async function load() {
@@ -60,7 +60,7 @@ export default function RefugeesGrid() {
   }, [schema]);
 
   if (!schema) return <div>Loading...</div>;
-console.log('permissions',{permissions});
+console.log('permissionsMerged',{permissionsMerged});
 
   return (
     <div style={{ padding: 20 }}>
@@ -76,8 +76,7 @@ console.log('permissions',{permissions});
               key: 'basic',
               label: 'الأساسي',
               type: 'form',
-              table: 'refugees',  nameColumn: 'id',   // 👈 هذا هو المطلوب فقط
-            },
+              table: 'refugees',              },
             {
               key: 'family',
               label: 'أفراد العائلة',
@@ -109,7 +108,7 @@ console.log('permissions',{permissions});
           initialTab="basic"
           onTabChange={(key) => console.log('Tab:', key)}
           onBeforeOpen={(row) => row.status !== 'blocked'}
-          permissions={permissions}      // 👈 الصلاحيات الموحدة
+          permissions={permissionsMerged}      // 👈 الصلاحيات الموحدة
           userRoles={userRoles}          // 👈 أدوار المستخدم
         />
       </Box>
