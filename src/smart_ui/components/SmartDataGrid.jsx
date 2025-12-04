@@ -18,6 +18,7 @@ export function SmartDataGrid({
 
   demoMode = false,
   permissions = {},   // 👈 تمت إضافتها هنا
+
   DrawerTabs = [],
   DrawerHideFields = [],
   DrawerTitle,
@@ -141,7 +142,8 @@ export function SmartDataGrid({
     setSelectedRow(row);
     setModalOpen(true);
   };
-  console.log('console.log(userRoles) in SmartDataGrid --->  data_entry', userRoles);
+console.log("[SmartDataGrid] permissions received →", permissions);
+console.log("[SmartDataGrid] userRoles received →", userRoles);
 
   return (
     <>
@@ -169,7 +171,6 @@ export function SmartDataGrid({
         table={table}
         row={selectedRow}
         schema={schema}
-        permissions={permissions}       // 👈 تمت إضافة هذا فقط
         DrawerTabs={DrawerTabs}
         DrawerHideFields={DrawerHideFields}
         DrawerTitle={DrawerTitle}
@@ -181,6 +182,7 @@ export function SmartDataGrid({
         initialTab={initialTab}
         roles={userRoles}
         demoMode={demoMode}
+        permissions={permissions}   // 👈 مهم جداً
 
       />
     </>

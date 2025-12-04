@@ -17,9 +17,7 @@ import {
   getObjectTemplate,
   getFields,
 } from '../smart_ui/core/schemaEngine/index.js';
-import globalPermissions from '../smart_ui/core/globalPermissions';
-import refugeesPermissions from '../smart_ui/core/refugeesPermissions';
-import { mergePermissions } from '../smart_ui/core/mergePermissions';
+
 import { appContext } from '../context/appContext';
 
 import { SmartDataGrid } from '../smart_ui/components/SmartDataGrid';
@@ -31,7 +29,9 @@ const API_BASE_URL = process.env.REACT_APP_SCHEMA_ENDPOINT;
 export default function RefugeesGrid() {
   const api = useApi();
   const { user } = useContext(appContext);
-  const userRoles = user?.roles || [];
+const userRoles = Array.isArray(user?.roles)
+  ? user.roles
+  : [user?.roles].filter(Boolean);
 
   const [schema, setSchema] = useState(null);
   const [columns, setColumns] = useState([]);
@@ -39,7 +39,41 @@ export default function RefugeesGrid() {
   const [fields, setFields] = useState([]);
 
   // دمج الصلاحيات العامة + الخاصة بصفحة اللاجئين
-  const permissionsMerged = mergePermissions(globalPermissions, refugeesPermissions);
+const refugeesPermissions = {
+  modal: {
+    open: ["data_entry", "reviewer"],
+    edit: ["data_entry"],
+    view: [ "approver"],
+    fullscreen: true,
+    print: ["data_entry", "approver"]
+  },
+  tabs: {
+    basic: {
+      view: true,
+      edit: ["data_entry"]
+    },
+    family: {
+      view: true,
+      add: ["data_entry"],
+      edit: ["data_entry"],
+      delete: ["data_entry"]
+    },
+    stages: {
+      view: true,
+      add:false,
+      edit: true,
+      delete: false
+    }
+  },
+
+  fields: {
+    refugees: {
+      father_name: { hideFor: ["data_entry"] },
+      nationality: { readonlyFor: ["data_entry"] }
+    }
+  }
+};
+
 
   useEffect(() => {
     async function load() {
@@ -60,16 +94,26 @@ export default function RefugeesGrid() {
   }, [schema]);
 
   if (!schema) return <div>Loading...</div>;
-console.log('permissionsMerged',{permissionsMerged});
+
+ 
+ console.log("[RefugeesGrid] user =", user);
+console.log("[RefugeesGrid] userRoles =", userRoles);
 
   return (
     <div style={{ padding: 20 }}>
-      <h2>Schema Example Me</h2>
+      <h2>Schema Example Me testing user roles:
+  
+<p> {userRoles} </p>
+
+
+
+      </h2>
 
       <Box sx={{ height: 'calc(100vh - 200px)' }}>
         <SmartDataGrid
           table="refugees"
           schema={schema}
+          permissions={refugeesPermissions}   // 👈 هذا أهم شيء
           FieldsShow={['id', 'frist_name', 'gender', 'gov_label']}
           DrawerTabs={[
             {
@@ -108,8 +152,8 @@ console.log('permissionsMerged',{permissionsMerged});
           initialTab="basic"
           onTabChange={(key) => console.log('Tab:', key)}
           onBeforeOpen={(row) => row.status !== 'blocked'}
-          permissions={permissionsMerged}      // 👈 الصلاحيات الموحدة
           userRoles={userRoles}          // 👈 أدوار المستخدم
+          
         />
       </Box>
     </div>
