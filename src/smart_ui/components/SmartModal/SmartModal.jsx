@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Box, Modal, Tabs, Tab, CircularProgress, Typography } from '@mui/material';
 
@@ -21,18 +20,10 @@ export default function SmartModal({
   lazyTabs = true,
   initialTab,
   demoMode = false,
-  permissions = {},   // ✔ يجب إضافتها هنا
+  permissions = {}, // ✔ يجب إضافتها هنا
 }) {
   // ⬅️ Hook: إدارة التابات + البيانات + التحميل
-  const {
-    activeTab,
-    setActiveTab,
-    visibleTabs,
-    tabData,
-    tabLoading,
-    tabError,
-    loadTabData,
-  } = useModalTabs({
+  const { activeTab, setActiveTab, visibleTabs, tabData, tabLoading, tabError, loadTabData } = useModalTabs({
     open,
     row,
     table,
@@ -97,11 +88,7 @@ export default function SmartModal({
 
     // ⚠ Error
     if (tabError[key]) {
-      return (
-        <Box sx={{ padding: 2, color: 'red' }}>
-          خطأ في تحميل البيانات: {tabError[key]}
-        </Box>
-      );
+      return <Box sx={{ padding: 2, color: 'red' }}>خطأ في تحميل البيانات: {tabError[key]}</Box>;
     }
 
     // 🟦 FORM TAB → BasicTabRenderer مع إدارة الحقول
@@ -109,10 +96,7 @@ export default function SmartModal({
       const tableName = currentTab.table || table;
 
       // دمج الحقول المخفية: من المودال + من التاب نفسه
-      const mergedHideFields = [
-        ...(DrawerHideFields || []),
-        ...(currentTab.hideFields || []),
-      ];
+      const mergedHideFields = [...(DrawerHideFields || []), ...(currentTab.hideFields || [])];
 
       const details = dataObj.details || row || null;
 
@@ -135,13 +119,7 @@ export default function SmartModal({
       const rows = dataObj.rows || [];
       return (
         <Box sx={{ padding: 2 }}>
-          <TableTabRenderer
-            rows={rows}
-            tab={currentTab}
-            schema={schema}
-            row={row}
-            roles={userRoles}
-          />
+          <TableTabRenderer rows={rows} tab={currentTab} schema={schema} row={row} roles={userRoles} />
         </Box>
       );
     }
@@ -158,11 +136,7 @@ export default function SmartModal({
   // =============================
   const renderFooter = () => {
     if (!DrawerFooter) return null;
-    return (
-      <Box sx={{ padding: 2, borderTop: '1px solid #eee' }}>
-        {DrawerFooter(row)}
-      </Box>
-    );
+    return <Box sx={{ padding: 2, borderTop: '1px solid #eee' }}>{DrawerFooter(row)}</Box>;
   };
 
   return (

@@ -29,9 +29,7 @@ const API_BASE_URL = process.env.REACT_APP_SCHEMA_ENDPOINT;
 export default function RefugeesGrid() {
   const api = useApi();
   const { user } = useContext(appContext);
-const userRoles = Array.isArray(user?.roles)
-  ? user.roles
-  : [user?.roles].filter(Boolean);
+  const userRoles = Array.isArray(user?.roles) ? user.roles : [user?.roles].filter(Boolean);
 
   const [schema, setSchema] = useState(null);
   const [columns, setColumns] = useState([]);
@@ -39,41 +37,40 @@ const userRoles = Array.isArray(user?.roles)
   const [fields, setFields] = useState([]);
 
   // دمج الصلاحيات العامة + الخاصة بصفحة اللاجئين
-const refugeesPermissions = {
-  modal: {
-    open: ["data_entry", "reviewer"],
-    edit: ["data_entry"],
-    view: [ "approver"],
-    fullscreen: true,
-    print: ["data_entry", "approver"]
-  },
-  tabs: {
-    basic: {
-      view: true,
-      edit: ["data_entry"]
+  const refugeesPermissions = {
+    modal: {
+      open: ['data_entry', 'reviewer'],
+      edit: ['data_entry'],
+      view: ['approver'],
+      fullscreen: true,
+      print: ['data_entry', 'approver'],
     },
-    family: {
-      view: true,
-      add: ["data_entry"],
-      edit: ["data_entry"],
-      delete: ["data_entry"]
+    tabs: {
+      basic: {
+        view: true,
+        edit: ['data_entry'],
+      },
+      family: {
+        view: true,
+        add: ['data_entry'],
+        edit: ['data_entry'],
+        delete: ['data_entry'],
+      },
+      stages: {
+        view: true,
+        add: false,
+        edit: false,
+        delete: false,
+      },
     },
-    stages: {
-      view: true,
-      add:false,
-      edit: true,
-      delete: false
-    }
-  },
 
-  fields: {
-    refugees: {
-      father_name: { hideFor: ["data_entry"] },
-      nationality: { readonlyFor: ["data_entry"] }
-    }
-  }
-};
-
+    fields: {
+      refugees_v: {
+        father_name: { hideFor: ['data_entry'] },
+        nationality: { readonlyFor: ['data_entry'] },
+      },
+    },
+  };
 
   useEffect(() => {
     async function load() {
@@ -95,32 +92,29 @@ const refugeesPermissions = {
 
   if (!schema) return <div>Loading...</div>;
 
- 
- console.log("[RefugeesGrid] user =", user);
-console.log("[RefugeesGrid] userRoles =", userRoles);
+  console.log('[RefugeesGrid] user =', user);
+  console.log('[RefugeesGrid] userRoles =', userRoles);
 
   return (
     <div style={{ padding: 20 }}>
-      <h2>Schema Example Me testing user roles:
-  
-<p> {userRoles} </p>
-
-
-
+      <h2>
+        Schema Example Me testing user roles:
+        <p> {userRoles} </p>
       </h2>
 
       <Box sx={{ height: 'calc(100vh - 200px)' }}>
         <SmartDataGrid
-          table="refugees"
+          table="refugees_v"
           schema={schema}
-          permissions={refugeesPermissions}   // 👈 هذا أهم شيء
-          FieldsShow={['id', 'frist_name', 'gender', 'gov_label']}
+          permissions={refugeesPermissions} // 👈 هذا أهم شيء
+          FieldsShow={['id', 'frist_name', 'gender', 'gov_name', 'status', 'created_at']}
           DrawerTabs={[
             {
               key: 'basic',
               label: 'الأساسي',
               type: 'form',
-              table: 'refugees',              },
+              table: 'refugees_v',
+            },
             {
               key: 'family',
               label: 'أفراد العائلة',
@@ -136,7 +130,7 @@ console.log("[RefugeesGrid] userRoles =", userRoles);
               nameColumn: 'request_id',
             },
           ]}
-          DrawerHideFields={['created_at', 'updated_at']}
+          DrawerHideFields={['created_at', 'updated_at', 'created_by']}
           DrawerTitle={(row) => (row ? `تفاصيل اللاجئ رقم ${row.id}` : 'تفاصيل اللاجئ')}
           drawerWidth={500}
           DrawerStyle={{ background: '#fafafa' }}
@@ -152,8 +146,7 @@ console.log("[RefugeesGrid] userRoles =", userRoles);
           initialTab="basic"
           onTabChange={(key) => console.log('Tab:', key)}
           onBeforeOpen={(row) => row.status !== 'blocked'}
-          userRoles={userRoles}          // 👈 أدوار المستخدم
-          
+          userRoles={userRoles} // 👈 أدوار المستخدم
         />
       </Box>
     </div>

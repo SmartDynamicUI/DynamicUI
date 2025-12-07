@@ -1,10 +1,8 @@
-
 // useModalTabs.js
 import { useEffect, useMemo, useState } from 'react';
 import { SmartActions } from '../../core/permissions/smartActions';
 
-const API_BASE_URL =
-  process.env.REACT_APP_API_BASE_URL || 'http://127.0.0.1:9001';
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://127.0.0.1:9001';
 
 /**
  * Hook لإدارة تبويبات SmartModal:
@@ -24,7 +22,7 @@ export function useModalTabs({
   lazyTabs = true,
   demoMode = false,
   initialTab,
-  permissions = {}, 
+  permissions = {},
 }) {
   const [activeTab, setActiveTab] = useState(initialTab || null);
   const [tabData, setTabData] = useState({});
@@ -43,35 +41,32 @@ export function useModalTabs({
   //     const visibleByPerms = SmartActions.can(
   //       'view',
   //         permissions?.tabs?.[t.key] || {}, // ← صلاحيات التاب من الملف الأساسي
-  //   t.permissions || {},           
+  //   t.permissions || {},
   //       userRoles
   //     );
   //     return visibleByFn && visibleByPerms;
   //   });
   // }, [DrawerTabs, DrawerTabsVisible, userRoles]);
 
-const visibleTabs = useMemo(() => {
-  return (DrawerTabs || [])
-    .map((t) => ({
-      ...t,
-      permissions: permissions?.tabs?.[t.key] || {}   // ← دمج صلاحيات التاب داخل التاب نفسه
-    }))
-    .filter((t) => {
-      const visibleByFn = DrawerTabsVisible
-        ? DrawerTabsVisible(t.key, userRoles)
-        : true;
+  const visibleTabs = useMemo(() => {
+    return (DrawerTabs || [])
+      .map((t) => ({
+        ...t,
+        permissions: permissions?.tabs?.[t.key] || {}, // ← دمج صلاحيات التاب داخل التاب نفسه
+      }))
+      .filter((t) => {
+        const visibleByFn = DrawerTabsVisible ? DrawerTabsVisible(t.key, userRoles) : true;
 
-      const visibleByPerms = SmartActions.can(
-        "view",
-        t.permissions,       // ← الآن يحتوي على صلاحيات التاب
-        {},
-        userRoles
-      );
+        const visibleByPerms = SmartActions.can(
+          'view',
+          t.permissions, // ← الآن يحتوي على صلاحيات التاب
+          {},
+          userRoles
+        );
 
-      return visibleByFn && visibleByPerms;
-    });
-}, [DrawerTabs, DrawerTabsVisible, userRoles, permissions]);
-
+        return visibleByFn && visibleByPerms;
+      });
+  }, [DrawerTabs, DrawerTabsVisible, userRoles, permissions]);
 
   // ====== اختيار التاب الافتراضي عند فتح المودال ======
   useEffect(() => {
@@ -113,16 +108,7 @@ const visibleTabs = useMemo(() => {
     const { key, type, table: tabTable, nameColumn } = tab;
     const tableName = tabTable || table;
 
-    console.log(
-      'TAB DEBUG → table:',
-      tableName,
-      'type:',
-      type,
-      'nameColumn:',
-      nameColumn,
-      'row.id:',
-      row?.id
-    );
+    console.log('TAB DEBUG → table:', tableName, 'type:', type, 'nameColumn:', nameColumn, 'row.id:', row?.id);
 
     // DEMO MODE: بدون API
     if (demoMode) {
@@ -189,19 +175,14 @@ const visibleTabs = useMemo(() => {
       const payloadRecords = data?.data?.records;
       console.log('API RECORDS:', payloadRecords);
 
-      const firstRecord =
-        Array.isArray(payloadRecords) && payloadRecords.length > 0
-          ? payloadRecords[0]
-          : null;
+      const firstRecord = Array.isArray(payloadRecords) && payloadRecords.length > 0 ? payloadRecords[0] : null;
 
       if (type === 'form') {
         const details = firstRecord || data?.data || null;
         console.log('FORM SET DATA:', details);
         setTabData((prev) => ({ ...prev, [key]: { details } }));
       } else if (type === 'table') {
-        const rows = Array.isArray(payloadRecords)
-          ? payloadRecords
-          : data?.data || [];
+        const rows = Array.isArray(payloadRecords) ? payloadRecords : data?.data || [];
         console.log('SET TAB DATA → key:', key, 'rows:', rows);
         setTabData((prev) => ({ ...prev, [key]: { rows } }));
       }

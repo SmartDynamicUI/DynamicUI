@@ -34,6 +34,7 @@ export async function initSchemaEngine(options = {}) {
 
   const raw = await fetchAllSchemas(endpoint);
   const normalized = normalizeAllSchemas(raw);
+  console.log('🟢 🟢 🟢 🟢 🟢 schema:🟢 🟢 🟢 🟢 🟢 🟢 ', normalized);
 
   saveAllToCache(normalized);
   setLastUpdated(nowTimestamp());

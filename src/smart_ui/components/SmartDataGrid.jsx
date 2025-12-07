@@ -17,7 +17,7 @@ export function SmartDataGrid({
   getRowId,
 
   demoMode = false,
-  permissions = {},   // 👈 تمت إضافتها هنا
+  permissions = {}, // 👈 تمت إضافتها هنا
 
   DrawerTabs = [],
   DrawerHideFields = [],
@@ -100,12 +100,14 @@ export function SmartDataGrid({
   const columns = useMemo(() => {
     console.log('📘 [SmartDataGrid] Building columns for:', table);
 
-    // LOG: سكيما الجدول بشكل مباشر
-    console.log('📘 [SmartDataGrid] Table Schema:', schema?.[table]);
-    console.log('📘 [SmartDataGrid] Table Columns:', schema?.[table]?.columns);
+    const tableSchema = schema?.[table];
+    if (!tableSchema || !tableSchema.columns) {
+      console.warn(`⚠️ SmartDataGrid: schema for table "${table}" غير متوفر بعد.`);
+      return []; // بدون هذا تتعطل الصفحة بالكامل
+    }
 
     return buildColumns({
-      tableSchema: { columns: schema[table].columns },
+      tableSchema: { columns: tableSchema.columns },
       FieldsShow,
       actions,
     });
@@ -128,22 +130,22 @@ export function SmartDataGrid({
     }
 
     const allowOpen = SmartActions.can(
-    "open",
-    permissions?.modal || {},   // صلاحيات المودل فقط
-    {},                          // لا Overrides على مستوى التاب
-    userRoles
-  );
+      'open',
+      permissions?.modal || {}, // صلاحيات المودل فقط
+      {}, // لا Overrides على مستوى التاب
+      userRoles
+    );
 
-  if (!allowOpen) {
-    console.log("⛔ لا توجد صلاحية لفتح المودل");
-    return;
-  }
+    if (!allowOpen) {
+      console.log('⛔ لا توجد صلاحية لفتح المودل');
+      return;
+    }
 
     setSelectedRow(row);
     setModalOpen(true);
   };
-console.log("[SmartDataGrid] permissions received →", permissions);
-console.log("[SmartDataGrid] userRoles received →", userRoles);
+  console.log('[SmartDataGrid] permissions received →', permissions);
+  console.log('[SmartDataGrid] userRoles received →', userRoles);
 
   return (
     <>
@@ -182,8 +184,7 @@ console.log("[SmartDataGrid] userRoles received →", userRoles);
         initialTab={initialTab}
         roles={userRoles}
         demoMode={demoMode}
-        permissions={permissions}   // 👈 مهم جداً
-
+        permissions={permissions} // 👈 مهم جداً
       />
     </>
   );
