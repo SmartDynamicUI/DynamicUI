@@ -1,11 +1,15 @@
 
 // TableTabRenderer.jsx
 import React, { useState } from 'react';
-import { Box, Button, Typography } from '@mui/material';
+import { Box, Button, Typography, Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,Alert,Snackbar } from '@mui/material';
 
 import InlineFormRenderer from './InlineFormRenderer';
 import { buildFormFields } from './SchemaFormBuilder';
 import { SmartActions } from '../../core/permissions/smartActions';
+import { getEndpoints } from '../../components/SmartModal/EndpointAdapter'
 
 /**
  * TableTabRenderer
@@ -23,6 +27,15 @@ export function TableTabRenderer({
 }) {
   const tableName = tab.table;
   const nameColumn = tab.nameColumn; // FK مثل refugee_id
+const [confirmOpen, setConfirmOpen] = useState(false);
+const [rowToDelete, setRowToDelete] = useState(null);
+const [snack, setSnack] = useState({
+  open: false,
+  type: "success", // success | error
+  message: ""
+});
+
+
 
   // form state
   const [activeEditRowId, setActiveEditRowId] = useState(null);
@@ -30,7 +43,7 @@ export function TableTabRenderer({
 
   const [formData, setFormData] = useState({});
 
-  // ⚙️ بناء الحقول مع دعم إخفاء الحقول على مستوى التاب
+  //  بناء الحقول مع دعم إخفاء الحقول على مستوى التاب
   const fields = buildFormFields(schema, tableName, {
     nameColumn,
     ignore: tab.hideFields || [],
@@ -76,12 +89,43 @@ export function TableTabRenderer({
   };
 
   // ===== حفظ (UI فقط - المرحلة الثانية سنربط API) =====
-  const handleSave = () => {
-    console.log('Saving record:', formData);
-    // API لاحقاً
+const handleSave = async () => {
+  try {
+    const { editUrl } = getEndpoints(tab, tableName, formData);
+
+    const res = await fetch(editUrl, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(formData),
+    });
+
+    if (!res.ok) throw new Error("Edit failed");
+
+    // إغلاق الفورم
     setActiveEditRowId(null);
     setShowAddForm(false);
-  };
+
+    // تحديث البيانات
+    if (typeof tab.reload === "function") {
+      await tab.reload();
+    }
+
+    // رسالة نجاح
+    setSnack({
+      open: true,
+      type: "success",
+      message: "تم تعديل السجل بنجاح",
+    });
+
+  } catch (err) {
+    console.error(err);
+    setSnack({
+      open: true,
+      type: "error",
+      message: "فشل تعديل السجل",
+    });
+  }
+};
 
   // ===== تحديث قيمة حقل واحد =====
   const updateField = (fieldName, value) => {
@@ -90,6 +134,40 @@ export function TableTabRenderer({
 
   // ===== رأس الجدول (اسم الأعمدة) =====
   const headers = fields.filter((f) => !f.hidden).map((f) => f.label);
+
+
+const handleDelete = async (record) => {
+  try {
+    const { deleteUrl } = getEndpoints(tab, tableName, record);
+
+    const res = await fetch(deleteUrl, { method: "DELETE" });
+
+    if (!res.ok) throw new Error("Delete failed");
+
+    // تحديث الجدول إن كان هناك reload
+    if (typeof tab.reload === "function") {
+      await tab.reload();
+    }
+
+    setSnack({
+      open: true,
+      type: "success",
+      message: "تم حذف السجل بنجاح"
+    });
+
+  } catch (err) {
+    console.error(err);
+
+    setSnack({
+      open: true,
+      type: "error",
+      message: "فشل حذف السجل"
+    });
+  }
+};
+
+
+
 
   return (
     <Box>
@@ -186,9 +264,18 @@ export function TableTabRenderer({
                       )}
 
                       {canDelete && (
-                        <Button size="small" color="error">
-                          حذف
-                        </Button>
+                      <Button
+  size="small"
+  color="error"
+  onClick={() => {
+    setRowToDelete(r);
+    setConfirmOpen(true);
+  }}
+>
+  حذف
+</Button>
+
+
                       )}
                     </td>
                   )}
@@ -214,6 +301,53 @@ export function TableTabRenderer({
           </tbody>
         </Box>
       )}
+
+<Dialog
+  open={confirmOpen}
+  onClose={() => setConfirmOpen(false)}
+>
+  <DialogTitle>تأكيد الحذف</DialogTitle>
+
+  <DialogContent>
+    <Typography>
+      هل أنت متأكد أنك تريد حذف هذا السجل؟
+    </Typography>
+  </DialogContent>
+
+  <DialogActions>
+    <Button onClick={() => setConfirmOpen(false)}>
+      إلغاء
+    </Button>
+
+    <Button
+      color="error"
+      variant="contained"
+      onClick={() => {
+        handleDelete(rowToDelete);
+        setConfirmOpen(false);
+      }}
+    >
+      حذف
+    </Button>
+  </DialogActions>
+</Dialog>
+
+<Snackbar
+  open={snack.open}
+  autoHideDuration={3000}
+  onClose={() => setSnack({ ...snack, open: false })}
+  anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+>
+  <Alert
+    onClose={() => setSnack({ ...snack, open: false })}
+    severity={snack.type}
+    sx={{ width: "100%" }}
+    variant="filled"
+  >
+    {snack.message}
+  </Alert>
+</Snackbar>
+
     </Box>
   );
 }

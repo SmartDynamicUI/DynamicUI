@@ -8,7 +8,7 @@ import { useApi } from '../utils';
 import { DangerMsg } from '../components/NotificationMsg';
 import { Stack, Typography } from '@mui/material';
 import { format } from 'date-fns';
-import { ar, vi } from 'date-fns/locale';
+import { ar, tr, vi } from 'date-fns/locale';
 import { auth } from 'src/firebase.config';
 import {
   initSchemaEngine,
@@ -60,7 +60,7 @@ export default function RefugeesGrid() {
         view: true,
         add: false,
         edit: false,
-        delete: false,
+        delete: true,
       },
     },
 

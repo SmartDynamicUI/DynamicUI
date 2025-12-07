@@ -204,6 +204,16 @@ export default function BasicTabRenderer({
             );
           })}
       </Grid>
+{isView && canEdit && (
+  <Button
+    variant="contained"
+    color="primary"
+    onClick={() => setLocalMode('edit')}
+    sx={{ mt: 3 }}
+  >
+    تعديل
+  </Button>
+)}
 
       {!isView && canEdit && (
         <Stack direction="row" spacing={2} sx={{ mt: 3, justifyContent: 'flex-start' }}>
